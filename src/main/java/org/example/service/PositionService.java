@@ -31,7 +31,7 @@ public class PositionService {
     }
 
     public void deletePosition(Integer id) {
-        positionRepository.delete(id);
+        positionRepository.delete(new Position(id));
     }
 
 

@@ -37,7 +37,7 @@ public class EmployeeService {
     }
 
     public void deleteEmployee(Integer id) {
-        employeeRepository.delete(id);
+        employeeRepository.delete(new Employee(id));
     }
 
     public List<Employee> getEmployeeByPositionName(String name) {

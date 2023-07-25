@@ -1,7 +1,5 @@
 package org.example.repository.impl;
 
-import org.example.model.Employee;
-import org.example.model.Position;
 import org.example.model.Project;
 import org.example.repository.ProjectRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -99,9 +97,9 @@ public class ProjectRepositoryImpl implements ProjectRepository {
     }
 
     @Override
-    public void delete(int projectId) {
+    public void delete(Project project) {
         try (PreparedStatement prst =  connection.prepareStatement(DELETE_PROJECT)){
-            prst.setInt(1, projectId);
+            prst.setInt(1, project.getId());
             prst.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();

@@ -1,6 +1,5 @@
 package org.example.repository.impl;
 
-import org.example.model.Employee;
 import org.example.model.Position;
 import org.example.repository.PositionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -92,9 +91,9 @@ public class PositionRepositoryImpl implements PositionRepository {
     }
 
     @Override
-    public void delete(int positionId) {
+    public void delete(Position position) {
         try (PreparedStatement prst =  connection.prepareStatement(DELETE_POSITION)){
-            prst.setInt(1, positionId);
+            prst.setInt(1, position.getId());
             prst.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();

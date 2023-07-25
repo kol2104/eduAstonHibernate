@@ -31,7 +31,7 @@ public class ProjectService {
     }
 
     public void deleteProject(Integer id) {
-        projectRepository.delete(id);
+        projectRepository.delete(new Project(id));
     }
 
     public List<Project> getProjectsByEmployeeName(String name) {

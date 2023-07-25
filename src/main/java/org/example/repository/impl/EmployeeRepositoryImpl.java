@@ -2,7 +2,6 @@ package org.example.repository.impl;
 
 import org.example.model.Employee;
 import org.example.model.Position;
-import org.example.model.Project;
 import org.example.repository.EmployeeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
@@ -102,9 +101,9 @@ public class EmployeeRepositoryImpl implements EmployeeRepository {
     }
 
     @Override
-    public void delete(int employeeId) {
+    public void delete(Employee employee) {
         try (PreparedStatement prst =  connection.prepareStatement(DELETE_EMPLOYEE)){
-            prst.setInt(1, employeeId);
+            prst.setInt(1, employee.getId());
             prst.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();

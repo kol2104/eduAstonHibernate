@@ -12,4 +12,7 @@ public class Employee {
     private String name;
     private Position position;
 
+    public Employee(Integer id) {
+        this.id = id;
+    }
 }
