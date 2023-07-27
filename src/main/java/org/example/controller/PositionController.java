@@ -12,18 +12,19 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/position")
+@ControllerAdvice
 public class PositionController {
 
     @Autowired
     private PositionService positionService;
 
     @GetMapping("/{id}")
-    public ResponseEntity getPosition(@PathVariable("id") Integer id) {
+    public ResponseEntity getPosition(@PathVariable("id") Long id) {
         Optional<Position> position = positionService.getPosition(id);
         if (position.isPresent()){
-            return new ResponseEntity<>(position, HttpStatus.OK);
+            return new ResponseEntity<>(position.get(), HttpStatus.OK);
         }
-        return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
 
     @GetMapping
@@ -46,7 +47,7 @@ public class PositionController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity deletePosition(@PathVariable("id") Integer id) {
+    public ResponseEntity deletePosition(@PathVariable("id") Long id) {
         positionService.deletePosition(id);
         return new ResponseEntity<>(HttpStatus.OK);
     }
@@ -54,6 +55,6 @@ public class PositionController {
     @ExceptionHandler({PositionNotFoundException.class})
     public ResponseEntity handleException(Exception exception) {
         Object errorBody = exception.getMessage();
-        return new ResponseEntity(errorBody, HttpStatus.BAD_REQUEST);
+        return new ResponseEntity(errorBody, HttpStatus.NOT_FOUND);
     }
 }

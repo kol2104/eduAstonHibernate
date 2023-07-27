@@ -1,102 +1,78 @@
 package org.example.repository.impl;
 
+import org.example.exception.MyNullPointerException;
+import org.example.exception.PositionNotFoundException;
 import org.example.model.Position;
 import org.example.repository.PositionRepository;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.hibernate.query.Query;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 @Repository
 public class PositionRepositoryImpl implements PositionRepository {
 
-    private final String GET_POSITION_BY_ID = "select * from positions where id = ?;";
-    private final String GET_ALL_POSITIONS = "select * from positions;";
-    private final String SAVE_POSITION = "insert into positions (name) values (?);";
-    private final String UPDATE_POSITION = "update positions set name = ? where id = ?;";
-    private final String DELETE_POSITION = "delete from positions where id = ?;";
-
-
-    private final Connection connection;
+    private SessionFactory sessionFactory;
 
     @Autowired
-    public PositionRepositoryImpl(Connection connection) {this.connection = connection;}
+    public PositionRepositoryImpl(SessionFactory sessionFactory) {this.sessionFactory = sessionFactory;}
 
     @Override
-    public Optional<Position> get(int id) {
-        try (PreparedStatement prst =  connection.prepareStatement(GET_POSITION_BY_ID)){
-            prst.setInt(1, id);
-
-            ResultSet resultSet = prst.executeQuery();
-            if (!resultSet.next()) {
-                return Optional.empty();
-            }
-            Position position = new Position();
-            position.setId(resultSet.getInt("id"));
-            position.setName(resultSet.getString("name"));
-            return Optional.of(position);
-        } catch (SQLException e) {
-            e.printStackTrace();
+    public Optional<Position> get(Long id) {
+        checkNotNull(id);
+        Session session = sessionFactory.getCurrentSession();
+        Position position = session.get(Position.class, id);
+        if (position == null) {
+            return Optional.empty();
         }
-        return Optional.empty();
+        return Optional.of(position);
     }
 
     @Override
     public List<Position> getAll() {
-        List<Position> positions = new ArrayList<>();
-        try (PreparedStatement prst =  connection.prepareStatement(GET_ALL_POSITIONS)){
-            ResultSet resultSet = prst.executeQuery();
-            while (resultSet.next()) {
-                Position position = new Position();
-                position.setId(resultSet.getInt("id"));
-                position.setName(resultSet.getString("name"));
-
-                positions.add(position);
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return positions;
+        Session session = sessionFactory.getCurrentSession();
+        return session.createQuery("from Position").list();
     }
 
     @Override
     public boolean save(Position position) {
-        try (PreparedStatement prst =  connection.prepareStatement(SAVE_POSITION)){
-            prst.setString(1, position.getName());
-
-            prst.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return false;
-        }
+        checkNotNull(position);
+        Session session = sessionFactory.getCurrentSession();
+        session.persist(position);
         return true;
     }
 
     @Override
     public void update(Position position) {
-        try (PreparedStatement prst =  connection.prepareStatement(UPDATE_POSITION)){
-            prst.setString(1, position.getName());
-
-            prst.setInt(2, position.getId());
-            prst.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
+        checkNotNull(position);
+        checkNotNull(position.getId());
+        Session session = sessionFactory.getCurrentSession();
+        Position oldPosition = session.get(Position.class, position.getId());
+        if (oldPosition == null) {
+            throw new PositionNotFoundException(position.getId());
         }
+        Query query = session.createQuery("update Position p set p.name = :name where p.id = :id");
+        query.setParameter("id", position.getId());
+        query.setParameter("name", position.getName() != null ? position.getName() : oldPosition.getName());
+        query.executeUpdate();
     }
 
     @Override
-    public void delete(Position position) {
-        try (PreparedStatement prst =  connection.prepareStatement(DELETE_POSITION)){
-            prst.setInt(1, position.getId());
-            prst.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
+    public void delete(Long position) {
+        checkNotNull(position);
+        Session session = sessionFactory.getCurrentSession();
+        Query query = session.createQuery("delete from Position p where p.id = :id");
+        query.setParameter("id", position);
+        query.executeUpdate();
+    }
+
+    private void checkNotNull(Object o) {
+        if (o == null) {
+            throw new MyNullPointerException();
         }
     }
 }

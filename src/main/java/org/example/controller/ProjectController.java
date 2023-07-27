@@ -1,5 +1,7 @@
 package org.example.controller;
 
+import org.example.exception.PositionNotFoundException;
+import org.example.exception.ProjectNotFoundException;
 import org.example.model.Project;
 import org.example.service.ProjectService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,18 +13,19 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/project")
+@ControllerAdvice
 public class ProjectController {
 
     @Autowired
     private ProjectService projectService;
 
     @GetMapping("/{id}")
-    public ResponseEntity getProject(@PathVariable("id") Integer id) {
+    public ResponseEntity getProject(@PathVariable("id") Long id) {
         Optional<Project> project = projectService.getProject(id);
         if (project.isPresent()){
-            return new ResponseEntity<>(project, HttpStatus.OK);
+            return new ResponseEntity<>(project.get(), HttpStatus.OK);
         }
-        return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
 
     @GetMapping
@@ -45,13 +48,19 @@ public class ProjectController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity deleteProject(@PathVariable("id") Integer id) {
+    public ResponseEntity deleteProject(@PathVariable("id") Long id) {
         projectService.deleteProject(id);
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
     @GetMapping("/employee")
-    public ResponseEntity getProjectsByEmployeeName(@RequestParam("name") String name) {
-        return new ResponseEntity<>(projectService.getProjectsByEmployeeName(name), HttpStatus.OK);
+    public ResponseEntity getProjectsByEmployeeLastName(@RequestParam("name") String name) {
+        return new ResponseEntity<>(projectService.getProjectsByEmployeeLastName(name), HttpStatus.OK);
+    }
+
+    @ExceptionHandler({ProjectNotFoundException.class})
+    public ResponseEntity handleException(Exception exception) {
+        Object errorBody = exception.getMessage();
+        return new ResponseEntity(errorBody, HttpStatus.NOT_FOUND);
     }
 }
