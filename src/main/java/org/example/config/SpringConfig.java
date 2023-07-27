@@ -15,7 +15,7 @@ import java.sql.SQLException;
 @Configuration
 @ComponentScan("org.example")
 @EnableWebMvc
-@PropertySource("classpath:application.properties")
+@PropertySource("classpath:database.properties")
 public class SpringConfig {
     @Autowired
     Environment env;
@@ -33,4 +33,6 @@ public class SpringConfig {
         }
         return connection;
     }
+
+
 }

@@ -1,128 +1,91 @@
 package org.example.repository.impl;
 
+import org.example.exception.MyNullPointerException;
+import org.example.exception.PositionNotFoundException;
+import org.example.exception.ProjectNotFoundException;
+import org.example.model.Employee;
+import org.example.model.Position;
 import org.example.model.Project;
 import org.example.repository.ProjectRepository;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.hibernate.query.Query;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 @Repository
 public class ProjectRepositoryImpl implements ProjectRepository {
 
-    private final String GET_PROJECT_BY_ID = "select * from project where id = ?;";
-    private final String GET_ALL_PROJECTS = "select * from project;";
-    private final String SAVE_PROJECT = "insert into project (name, client) values (?,?);";
-    private final String UPDATE_PROJECT = "update project set name = ?, client = ? where id = ?;";
-    private final String DELETE_PROJECT = "delete from project where id = ?;";
-    private final String GET_PROJECTS_BY_EMPLOYEE_NAME = "select p.* from employee e join projects_employee pe " +
-            "on e.id = pe.employee_id join project p on p.id = pe.project_id where e.name = ?;";
-
-    private final Connection connection;
+    private SessionFactory sessionFactory;
 
     @Autowired
-    public ProjectRepositoryImpl(Connection connection) {this.connection = connection;}
+    public ProjectRepositoryImpl(SessionFactory sessionFactory) {this.sessionFactory = sessionFactory;}
 
     @Override
-    public Optional<Project> get(int id) {
-        try (PreparedStatement prst =  connection.prepareStatement(GET_PROJECT_BY_ID)){
-            prst.setInt(1, id);
-
-            ResultSet resultSet = prst.executeQuery();
-            if (!resultSet.next()) {
-                return Optional.empty();
-            }
-            Project project = new Project();
-            project.setId(resultSet.getInt("id"));
-            project.setName(resultSet.getString("name"));
-            project.setClient(resultSet.getString("client"));
-            return Optional.of(project);
-        } catch (SQLException e) {
-            e.printStackTrace();
+    public Optional<Project> get(Long id) {
+        checkNotNull(id);
+        Session session = sessionFactory.getCurrentSession();
+        Project project = session.get(Project.class, id);
+        if (project == null) {
+            return Optional.empty();
         }
-        return Optional.empty();
+        return Optional.of(project);
     }
 
     @Override
     public List<Project> getAll() {
-        List<Project> projects = new ArrayList<>();
-        try (PreparedStatement prst =  connection.prepareStatement(GET_ALL_PROJECTS)){
-            ResultSet resultSet = prst.executeQuery();
-            while (resultSet.next()) {
-                Project project = new Project();
-                project.setId(resultSet.getInt("id"));
-                project.setName(resultSet.getString("name"));
-                project.setClient(resultSet.getString("client"));
-
-                projects.add(project);
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return projects;
+        Session session = sessionFactory.getCurrentSession();
+        return session.createQuery("from Project").list();
     }
 
     @Override
     public boolean save(Project project) {
-        try (PreparedStatement prst =  connection.prepareStatement(SAVE_PROJECT)){
-            prst.setString(1, project.getName());
-            prst.setString(2, project.getClient());
-
-            prst.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return false;
-        }
+        checkNotNull(project);
+        Session session = sessionFactory.getCurrentSession();
+        session.persist(project);
         return true;
     }
 
     @Override
     public void update(Project project) {
-        try (PreparedStatement prst =  connection.prepareStatement(UPDATE_PROJECT)){
-            prst.setString(1, project.getName());
-            prst.setString(2, project.getClient());
-
-
-            prst.setInt(3, project.getId());
-            prst.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
+        checkNotNull(project);
+        checkNotNull(project.getId());
+        Session session = sessionFactory.getCurrentSession();
+        Project oldProject = session.get(Project.class, project.getId());
+        if (oldProject == null) {
+            throw new ProjectNotFoundException(project.getId());
         }
+        Query query = session.createQuery("update Project p set p.name = :name, p.client = :client " +
+                "where p.id = :id");
+        query.setParameter("id", project.getId());
+        query.setParameter("name", project.getName() != null ? project.getName() : oldProject.getName());
+        query.setParameter("client", project.getClient() != null ? project.getClient() : oldProject.getClient());
+        query.executeUpdate();
     }
 
     @Override
-    public void delete(Project project) {
-        try (PreparedStatement prst =  connection.prepareStatement(DELETE_PROJECT)){
-            prst.setInt(1, project.getId());
-            prst.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+    public void delete(Long project) {
+        checkNotNull(project);
+        Session session = sessionFactory.getCurrentSession();
+        Query query = session.createQuery("delete from Project p where p.id = :id");
+        query.setParameter("id", project);
+        query.executeUpdate();
     }
 
     @Override
-    public List<Project> getProjectsByEmployeeName(String name) {
-        List<Project> projects = new ArrayList<>();
-        try (PreparedStatement prst =  connection.prepareStatement(GET_PROJECTS_BY_EMPLOYEE_NAME)){
-            prst.setString(1, name);
-            ResultSet resultSet = prst.executeQuery();
-            while (resultSet.next()) {
-                Project project = new Project();
-                project.setId(resultSet.getInt("id"));
-                project.setName(resultSet.getString("name"));
-                project.setClient(resultSet.getString("client"));
+    public List<Project> getProjectsByEmployeeLastName(String lastName) {
+        Session session = sessionFactory.getCurrentSession();
+        Query<Employee> query = session.createQuery("from Employee e where e.lastName = :lastName", Employee.class);
+        query.setParameter("lastName", lastName);
+        return query.uniqueResult().getProjects();
+    }
 
-                projects.add(project);
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
+    private void checkNotNull(Object o) {
+        if (o == null) {
+            throw new MyNullPointerException();
         }
-        return projects;
     }
 }
